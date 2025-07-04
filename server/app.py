@@ -67,7 +67,7 @@ def broadcast():
             if peer_id not in rooms[assigned_room_id]['peers']:
                 rooms[assigned_room_id]['peers'].append(peer_id)
                 rooms[assigned_room_id]['peerCount'] = len(rooms[assigned_room_id]['peers'])
-                # Notify other peers of new join
+                # Notify existing peers of new join (existing peers will initiate offers)
                 for other_peer in rooms[assigned_room_id]['peers']:
                     if other_peer != peer_id:
                         if other_peer not in signaling_messages:
@@ -77,7 +77,8 @@ def broadcast():
                             'sender': peer_id,
                             'target': other_peer
                         })
-                logger.info(f"[Server] Peer {peer_id} added to room {assigned_room_id}, peers: {rooms[assigned_room_id]['peers']}")
+                        logger.info(f"[Server] Stored peer-joined from {peer_id} to {other_peer} (existing peer will offer)")
+                logger.info(f"[Server] Peer {peer_id} added to room {assigned_room_id} as answerer, peers: {rooms[assigned_room_id]['peers']}")
             peer_to_room[peer_id] = assigned_room_id
             response = {
                 'status': 'joined',
