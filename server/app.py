@@ -440,10 +440,13 @@ def cleanup_stale_rooms():
                 logger.info(f"[Server] Removing stale room {room_id}")
                 del rooms[room_id]
 
+# if __name__ == '__main__':
+#     from threading import Timer
+#     def run_cleanup():
+#         cleanup_stale_rooms()
+#         Timer(600, run_cleanup).start()
+#     run_cleanup()
+#     app.run(ssl_context=('cert/server.crt', 'cert/server.key'), host='0.0.0.0', port=5000)
+
 if __name__ == '__main__':
-    from threading import Timer
-    def run_cleanup():
-        cleanup_stale_rooms()
-        Timer(600, run_cleanup).start()
-    run_cleanup()
-    app.run(ssl_context=('cert/server.crt', 'cert/server.key'), host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)
