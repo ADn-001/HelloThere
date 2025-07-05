@@ -19,6 +19,8 @@ peer_to_room = {}  # {peer_id: room_id}
 signaling_messages = {}  # {peer_id: [{type, sender, target, data}]}
 active_chats = {}  # {peer_id: set([target_peer_ids])}
 state_lock = Lock()
+last_location_check = {}  # {peer_id: timestamp of last check}
+LOCATION_GRACE_PERIOD = 120  # Seconds to tolerate missing location data
 
 # Calculate distance between two coordinates (in meters)
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -67,7 +69,6 @@ def broadcast():
             if peer_id not in rooms[assigned_room_id]['peers']:
                 rooms[assigned_room_id]['peers'].append(peer_id)
                 rooms[assigned_room_id]['peerCount'] = len(rooms[assigned_room_id]['peers'])
-                # Notify existing peers of new join (existing peers will initiate offers)
                 for other_peer in rooms[assigned_room_id]['peers']:
                     if other_peer != peer_id:
                         if other_peer not in signaling_messages:
@@ -100,6 +101,7 @@ def broadcast():
                 'peerList': []
             }
         
+        last_location_check[peer_id] = time.time()  # Record location check time
         logger.info(f"[Server] Updated peer_to_room: {peer_to_room}")
         logger.info(f"[Server] Broadcast response: {response}")
         logger.info(f"[Server] Current rooms state: {rooms}")
@@ -132,7 +134,6 @@ def initiate_group_chat():
             return jsonify({'error': 'Room not found'}), 404
         
         peer_list = [p for p in rooms[room_id]['peers'] if p != peer_id]
-        # Track active chats
         if peer_id not in active_chats:
             active_chats[peer_id] = set()
         for target_peer_id in peer_list:
@@ -167,7 +168,19 @@ def offer():
         
         room_id = peer_to_room[peer_id]
         for target_peer_id in target_peer_ids:
-            if target_peer_id not in peer_to_room or peer_to_room[target_peer_id] != room_id:
+            if target_peer_id not in peer_to_room:
+                logger.warning(f"[Server] Target peer {target_peer_id} not found in peer_to_room, queuing offer")
+                if target_peer_id not in signaling_messages:
+                    signaling_messages[target_peer_id] = []
+                signaling_messages[target_peer_id].append({
+                    'type': 'offer',
+                    'sender': peer_id,
+                    'target': target_peer_id,
+                    'data': offer
+                })
+                logger.info(f"[Server] Queued offer from {peer_id} to {target_peer_id}")
+                continue
+            if peer_to_room[target_peer_id] != room_id:
                 logger.error(f"[Server] Target peer {target_peer_id} not in room {room_id}")
                 continue
             if target_peer_id not in signaling_messages:
@@ -199,9 +212,21 @@ def answer():
     answer = data['answer']
     
     with state_lock:
-        if peer_id not in peer_to_room or target_peer_id not in peer_to_room:
-            logger.error(f"[Server] Peer {peer_id} or target peer {target_peer_id} not found in any room")
-            return jsonify({'error': 'Peer or target peer not found'}), 404
+        if peer_id not in peer_to_room:
+            logger.error(f"[Server] Peer {peer_id} not found in peer_to_room")
+            return jsonify({'error': 'Peer not found in any room'}), 404
+        if target_peer_id not in peer_to_room:
+            logger.warning(f"[Server] Target peer {target_peer_id} not found in peer_to_room, queuing answer")
+            if target_peer_id not in signaling_messages:
+                signaling_messages[target_peer_id] = []
+            signaling_messages[target_peer_id].append({
+                'type': 'answer',
+                'sender': peer_id,
+                'target': target_peer_id,
+                'data': answer
+            })
+            logger.info(f"[Server] Queued answer from {peer_id} to {target_peer_id}")
+            return jsonify({'status': 'answer queued'}), 200
         
         room_id = peer_to_room[peer_id]
         if peer_to_room[target_peer_id] != room_id:
@@ -303,7 +328,6 @@ def leave():
         
         rooms[room_id]['peers'].remove(peer_id)
         rooms[room_id]['peerCount'] = len(rooms[room_id]['peers'])
-        # Notify remaining peers
         for other_peer in rooms[room_id]['peers']:
             if other_peer not in signaling_messages:
                 signaling_messages[other_peer] = []
@@ -317,6 +341,8 @@ def leave():
             del rooms[room_id]
         
         del peer_to_room[peer_id]
+        if peer_id in last_location_check:
+            del last_location_check[peer_id]
         
         if peer_id in active_chats:
             for target_peer_id in active_chats[peer_id]:
@@ -363,12 +389,20 @@ def check_location():
         if room_id not in rooms:
             logger.error(f"[Server] Room {room_id} not found for peer {peer_id}")
             del peer_to_room[peer_id]
+            if peer_id in last_location_check:
+                del last_location_check[peer_id]
             return jsonify({'status': 'removed'}), 200
         
         max_distance = 100
         room = rooms[room_id]
         distance = calculate_distance(lat, lon, room['hostLatitude'], room['hostLongitude'])
+        current_time = time.time()
+        last_check = last_location_check.get(peer_id, 0)
+        
         if distance > max_distance:
+            if current_time - last_check < LOCATION_GRACE_PERIOD:
+                logger.info(f"[Server] Peer {peer_id} outside range ({distance}m), within grace period, keeping in room {room_id}")
+                return jsonify({'status': 'ok'}), 200
             logger.info(f"[Server] Peer {peer_id} removed from room {room_id}, distance: {distance}m")
             rooms[room_id]['peers'].remove(peer_id)
             rooms[room_id]['peerCount'] = len(rooms[room_id]['peers'])
@@ -384,6 +418,8 @@ def check_location():
                 logger.info(f"[Server] Room {room_id} empty, removing")
                 del rooms[room_id]
             del peer_to_room[peer_id]
+            if peer_id in last_location_check:
+                del last_location_check[peer_id]
             if peer_id in active_chats:
                 for target_peer_id in active_chats[peer_id]:
                     if target_peer_id in active_chats:
@@ -401,6 +437,7 @@ def check_location():
             logger.info(f"[Server] Updated peer_to_room: {peer_to_room}")
             return jsonify({'status': 'removed'}), 200
         
+        last_location_check[peer_id] = current_time
         logger.info(f"[Server] Peer {peer_id} remains in room {room_id}, distance: {distance}m")
         return jsonify({'status': 'ok'}), 200
 
@@ -440,13 +477,10 @@ def cleanup_stale_rooms():
                 logger.info(f"[Server] Removing stale room {room_id}")
                 del rooms[room_id]
 
-# if __name__ == '__main__':
-#     from threading import Timer
-#     def run_cleanup():
-#         cleanup_stale_rooms()
-#         Timer(600, run_cleanup).start()
-#     run_cleanup()
-#     app.run(ssl_context=('cert/server.crt', 'cert/server.key'), host='0.0.0.0', port=5000)
-
 if __name__ == '__main__':
+    from threading import Timer
+    def run_cleanup():
+        cleanup_stale_rooms()
+        Timer(300, run_cleanup).start()
+    run_cleanup()
     app.run(host='0.0.0.0', port=5000)
