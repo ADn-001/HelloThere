@@ -1,14 +1,14 @@
-#Hello-There: A Proximity Chat App – Getting Started (Development Version)
+# Hello-There: A Proximity Chat App – Getting Started (Development Version)
 
 By:
 
-##Adnan Mohammed Shelim
+## Adnan Mohammed Shelim
 
-##Vladimir Drevin
+## Vladimir Drevin
 
-##Alex Brijo Sebastian
+## Alex Brijo Sebastian
 
-##Fedor Ryzhenkov
+## Fedor Ryzhenkov
 
 This is the development branch of Hello-There, for the production branch, switch to "Master"
 The guide below provides step-by-step instructions to set up, run, and use the development version of the **Proximity Chat App**, a decentralized, proximity-based chat application.
