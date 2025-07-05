@@ -1,6 +1,6 @@
-flask==2.3.2  # Latest compatible with werkzeug>=3.0.0
+Flask==2.2.2 # Latest compatible with werkzeug>=3.0.0
 flask-cors==4.0.1  # Latest version, compatible with flask==2.3.2
 gevent==24.2.1
 greenlet==3.1.1
 gunicorn==22.0.0
-Werkzeug==2.2.2
+Werkzeug==2.3.7
