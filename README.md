@@ -40,7 +40,7 @@ The app uses:
 | Layer    | Stack                                              |
 | -------- | -------------------------------------------------- |
 | Frontend | JavaScript, React, WebRTC, Browser Geolocation API |
-| Backend  | Python, Flask, flask-cors, gunicorn, gevent        |
+| Backend  | Python, Flask, flask-cors                          |
 
 ### Local Setup
 
