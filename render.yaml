@@ -1,0 +1,17 @@
+# Define services to be deployed on Render
+services:
+  # Flask backend web service
+  - type: web
+    name: proximity-chat-backend
+    env: python
+    region: frankfurt  # Adjust to your preferred region (e.g., oregon, singapore)
+    plan: free       # Use Render's free tier
+    branch: production     # Deploy from the main branch
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 4 -k gevent -b 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: true  # Enable real-time logging
+      - key: PYTHON_VERSION
+        value: 3.12.3  # Explicitly set to Python 3.12.3
