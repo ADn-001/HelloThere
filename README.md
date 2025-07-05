@@ -1,17 +1,17 @@
-#Hello-There: A Proximity Chat App – Getting Started (Development Version)
+# Hello-There: A Proximity Chat App – Getting Started (Development Version)
 
 By:
 
-##Adnan Mohammed Shelim
+## Adnan Mohammed Shelim
 
-##Vladimir Drevin
+## Vladimir Drevin
 
-##Alex Brijo Sebastian
+## Alex Brijo Sebastian
 
-##Fedor Ryzhenkov
+## Fedor Ryzhenkov
 
 This is the production branch of Hello-There, for the dev branch, switch to "Main"
 
-##Production backend: https://hello-there-backend-dao6.onrender.com
+## Production backend: https://hello-there-backend-dao6.onrender.com
 
-##Production PWA:
+## Production PWA:
