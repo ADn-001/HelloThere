@@ -1,0 +1,17 @@
+# Define services to be deployed on Render
+services:
+  # Flask backend web service
+  - type: web
+    name: Hello-There-backend
+    env: python
+    region: frankfurt  # Choose region closest to your users (e.g., oregon, singapore)
+    plan: free       # Use Render's free tier
+    branch: main     # Deploy from the main branch
+    rootDir: server  # Flask backend directory
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 4 -k gevent -b 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: true  # Enable real-time logging
+      - key: PYTHON_VERSION
+        value: 3.12.3   # Match your Flask app's Python version

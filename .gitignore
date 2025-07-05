@@ -3,3 +3,4 @@ server/cert/
 __pycache__/
 *.pyc
 client/build/
+/venv
