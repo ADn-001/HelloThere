@@ -7,7 +7,6 @@ services:
     region: frankfurt  # Adjust to your preferred region (e.g., oregon, singapore)
     plan: free       # Use Render's free tier
     branch: production     # Deploy from the main branch
-    rootDir: server
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -w 4 -k gevent -b 0.0.0.0:$PORT app:app
     envVars:
